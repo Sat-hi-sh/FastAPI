@@ -46,39 +46,45 @@ def read_root():
 
 @app.get("/post")
 def read_root():
-    cursor.execute("SELECT * FROM post")
+    cursor.execute("""SELECT * FROM post""")
     post = cursor.fetchall();
     return {"message": post}    
 
 @app.post("/post", status_code = status.HTTP_201_CREATED)
 def create_post(post: Post):
-    post_dict = post.dict()
-    post_dict['id'] = randrange(0,100000)
-    my_post.append(post_dict)
-    return {"Name": my_post}
+    cursor.execute("""INSERT INTO  post (title,content) VALUES (%s, %s) RETURNING * """,
+                   (post.title, post.content))
+    new_post =  cursor.fetchone()
+    conn.commit()
+    return {"Detail": new_post}
 
 @app.get("/post/{id}")
 def get_one_post(id: int):
-    post = find_post(id)
+    cursor.execute("""SELECT * FROM POST WHERE id = %s""", (str(id)))
+    one_post = cursor.fetchone()
     if not post:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f"post with id = {id} was not found")
-    return {"Name": post}
+    return {"Name": one_post}
 
 @app.delete("/post/{id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_post(id :int):
-    index = find_post_index(id)
-    if index == None:
+    cursor.execute("""DELETE FROM POST WHERE id = %s RETURNING * """, (str(id),))
+    delete_post = cursor.fetchone()
+    print(delete_post)
+    conn.commit()
+    if delete_post == None:
             raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f"post with id = {id} was not existed")
-    my_post.pop(index)
     return Response(status_code = status.HTTP_204_NO_CONTENT)  
 
 
 @app.put("/post/{id}")
 def update_post(id :int, post : Post):
-    index = find_post_index(id)
-    if index == None:
+   
+    cursor.execute("""UPDATE POST SET title = %s, content =%s WHERE id = %s RETURNING * """,
+                    (post.title, post.content, str(id),))
+    update_post = cursor.fetchone()
+    conn.commit()
+    if update_post == None:
             raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f"post with id = {id} was not existed")
-    post_dict = post.dict()
-    post_dict['id'] = id
-    my_post[index] = post_dict
-    return {"message" : post_dict}
+
+    return {"message" : update_post}
