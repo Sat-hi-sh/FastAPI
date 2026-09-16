@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
@@ -7,17 +7,12 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from sqlalchemy.orm import Session
-from . import models
+from . import models, schemas
 from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-class Post(BaseModel):
-    title : str
-    content : str
-    published : bool = True
 
 while True:
     try:
@@ -49,16 +44,16 @@ def find_post_index(id):
 def read_root():
     return {"message": "Hii Buddies"}
 
-@app.get("/posts")
+@app.get("/posts",response_model =List[schemas.Post])
 def read_root(db: Session = Depends(get_db)):
     # cursor.execute("""SELECT * FROM post""")
     # post = cursor.fetchall();
     posts = db.query(models.Post).all()
-    return {"message": posts}    
+    return posts 
 
 
-@app.post("/post", status_code = status.HTTP_201_CREATED)
-def create_post(post: Post, db: Session = Depends(get_db)):
+@app.post("/post", status_code = status.HTTP_201_CREATED, response_model =schemas.Post)
+def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute("""INSERT INTO  posts (title,content) VALUES (%s, %s) RETURNING * """,
     #               (post.title, post.content))
     #new_post =  cursor.fetchone()
@@ -70,16 +65,16 @@ def create_post(post: Post, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_post)
 
-    return {"Detail": new_post}
+    return new_post
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model =schemas.Post)
 def get_one_post(id: int, db: Session = Depends(get_db)):
     #cursor.execute("""SELECT * FROM POSTs WHERE id = %s""", (str(id)))
     #one_post = cursor.fetchone()
     one_post = db.query(models.Post).filter(models.Post.id == id).first()
     if not one_post:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f"post with id = {id} was not found")
-    return {"Name": one_post}
+    return one_post
 
 @app.delete("/post/{id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_post(id :int, db: Session = Depends(get_db)):
@@ -97,8 +92,8 @@ def delete_post(id :int, db: Session = Depends(get_db)):
     return Response(status_code = status.HTTP_204_NO_CONTENT)  
 
 
-@app.put("/posts/{id}")
-def update_post(id: int, updated_post: Post, db: Session = Depends(get_db)):
+@app.put("/posts/{id}",response_model =schemas.Post)
+def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
 
     post_query = db.query(models.Post).filter(models.Post.id == id)
 
@@ -117,4 +112,4 @@ def update_post(id: int, updated_post: Post, db: Session = Depends(get_db)):
 
     db.commit()
 
-    return {"message": post_query.first()}
+    return post_query.first()
