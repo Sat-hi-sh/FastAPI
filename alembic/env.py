@@ -1,29 +1,31 @@
+import os
 from logging.config import fileConfig
-from sqlalchemy.engine import URL
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from sqlalchemy.engine import make_url
 
 from alembic import context
 from app.models import Base
-from app.config import settings
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-database_url = URL.create(
-    drivername="postgresql+psycopg2",
-    username=settings.database_username,
-    password=settings.database_password,
-    host=settings.database_hostname,
-    port=settings.database_port,
-    database=settings.database_name,
-)
+database_url = os.getenv("DATABASE_URL")
+
+if not database_url:
+    raise RuntimeError("DATABASE_URL is not set")
+
+url = make_url(database_url)
+
+# Heroku PostgreSQL SSL
+url = url.update_query_dict({"sslmode": "require"})
 
 config.set_main_option(
     "sqlalchemy.url",
-    str(database_url).replace("%", "%%")
+    str(url).replace("%", "%%")
 )
 
 # Interpret the config file for Python logging.
