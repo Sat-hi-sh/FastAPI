@@ -8,9 +8,6 @@ from sqlalchemy.engine import make_url
 from alembic import context
 from app.models import Base
 
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
 database_url = os.getenv("DATABASE_URL")
@@ -18,9 +15,18 @@ database_url = os.getenv("DATABASE_URL")
 if not database_url:
     raise RuntimeError("DATABASE_URL is not set")
 
+# Heroku may provide postgres://
+# SQLAlchemy requires postgresql://
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace(
+        "postgres://",
+        "postgresql+psycopg2://",
+        1
+    )
+
 url = make_url(database_url)
 
-# Heroku PostgreSQL SSL
+# Heroku PostgreSQL requires SSL
 url = url.update_query_dict({"sslmode": "require"})
 
 config.set_main_option(
@@ -28,15 +34,9 @@ config.set_main_option(
     str(url).replace("%", "%%")
 )
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
