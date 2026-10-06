@@ -3,7 +3,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from sqlalchemy.engine import make_url
 
 from alembic import context
 from app.models import Base
@@ -15,8 +14,6 @@ database_url = os.getenv("DATABASE_URL")
 if not database_url:
     raise RuntimeError("DATABASE_URL is not set")
 
-# Heroku may provide postgres://
-# SQLAlchemy requires postgresql://
 if database_url.startswith("postgres://"):
     database_url = database_url.replace(
         "postgres://",
@@ -24,14 +21,9 @@ if database_url.startswith("postgres://"):
         1
     )
 
-url = make_url(database_url)
-
-# Heroku PostgreSQL requires SSL
-url = url.update_query_dict({"sslmode": "require"})
-
 config.set_main_option(
     "sqlalchemy.url",
-    str(url).replace("%", "%%")
+    database_url.replace("%", "%%")
 )
 
 if config.config_file_name is not None:
