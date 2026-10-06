@@ -1,20 +1,21 @@
+import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-from .config import settings
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
 
-database_url = URL.create(
-    drivername="postgresql+psycopg2",
-    username=settings.database_username,
-    password=settings.database_password,
-    host=settings.database_hostname,
-    port=settings.database_port,
-    database=settings.database_name,
-)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+psycopg2://",
+        1
+    )
 
-engine = create_engine(database_url)
+engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(
     autocommit=False,
