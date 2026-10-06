@@ -3,10 +3,20 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
+    from app.config import settings
+
+    DATABASE_URL = (
+        f"postgresql+psycopg2://"
+        f"{settings.database_username}:"
+        f"{settings.database_password}@"
+        f"{settings.database_hostname}:"
+        f"{settings.database_port}/"
+        f"{settings.database_name}"
+    )
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
@@ -32,16 +42,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-# while True:
-#     try:
-#         conn = psycopg2.connect(host = "localhost", database = "fastapi", user = "postgres", password = "Developer@24", cursor_factory= RealDictCursor)
-#         cursor = conn.cursor()
-#         print("Database has been connected Successfully")
-#         break
-
-#     except Exception as error:
-#         print("Database Connectivity Failed")
-#         print("Error :", error)
-#         time.sleep(2)
